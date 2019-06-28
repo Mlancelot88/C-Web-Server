@@ -58,6 +58,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    int response_length = sprintf(response, "%s\n" "Content-Type: %s\n" "Content-Length: %d\n" "Connection: close\n" "\n", header, content_type, content_length);
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
@@ -80,12 +81,17 @@ void get_d20(int fd)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    char number[10];
+    int num = (rand() % 20) + 1;
+    int resp_len = sprintf(number, "%d", num);
+    printf("Number ---: %s\n", number);
 
     // Use send_response() to send it back as text/plain data
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", number, resp_len);
 }
 
 /**
@@ -122,6 +128,32 @@ void get_file(int fd, struct cache *cache, char *request_path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    char filepath[4096];
+    struct file_data *filedata;
+    struct cache_entry *entry;
+    char *mime_type;
+
+    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+
+    entry = cache_get(cache, filepath);
+
+    if (entry != NULL)
+    {
+        send_response(fd, "HTTP/1.1 200 FOUND", entry->content_type, entry->content, entry->content_length);
+    } else {
+        filedata = file_load(filepath);
+        if (filedata == NULL)
+        {
+            resp_404(fd);
+            return;
+        }
+        mime_type = mime_type_get(filepath);
+        printf("mime_type: %s", mime_type);
+
+        send_response(fd, "HTTP/1.1 200 FOUND", mime_type, filedata->data, filedata->size);
+
+        file_free(filedata);
+    }
 }
 
 /**
@@ -158,12 +190,35 @@ void handle_http_request(int fd, struct cache *cache)
     // IMPLEMENT ME! //
     ///////////////////
 
-    // Read the first two components of the first line of the request 
+    // Read the first two components of the first line of the request
+    char method[200];
+    char path[8192];
+    char protocol[200];
+
+    sscanf(request, "%s %s %s", method, path, protocol);
+
+    printf("request: %s", request);
+    printf("method: %ss\n", method);
+    printf("path: %s\n", path);
+    printf("protocol ---: %s\n", protocol);
  
     // If GET, handle the get endpoints
 
     //    Check if it's /d20 and handle that special case
     //    Otherwise serve the requested file by calling get_file()
+    if (strcmp(method, "GET") == 0)
+    {
+        printf("GET is this the value -----\n");
+        if (strcmp(path, "/d20") == 0)
+        {
+            get_d20(fd);
+        } else if (strcmp(path, "/cat") == 0)
+        {
+            get_cat(fd);
+        } else {
+            get_file(fd, cache, path);
+        }
+    }
 
 
     // (Stretch) If POST, handle the post request
