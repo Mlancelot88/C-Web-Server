@@ -128,32 +128,9 @@ void get_file(int fd, struct cache *cache, char *request_path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-    char filepath[4096];
-    struct file_data *filedata;
-    struct cache_entry *entry;
-    char *mime_type;
-
-    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
-
-    entry = cache_get(cache, filepath);
-
-    if (entry != NULL)
-    {
-        send_response(fd, "HTTP/1.1 200 FOUND", entry->content_type, entry->content, entry->content_length);
-    } else {
-        filedata = file_load(filepath);
-        if (filedata == NULL)
-        {
-            resp_404(fd);
-            return;
-        }
-        mime_type = mime_type_get(filepath);
-        printf("mime_type: %s", mime_type);
-
-        send_response(fd, "HTTP/1.1 200 FOUND", mime_type, filedata->data, filedata->size);
-
-        file_free(filedata);
-    }
+    (void)fd;
+    (void)cache;
+    (void)request_path;
 }
 
 /**
@@ -167,6 +144,8 @@ char *find_start_of_body(char *header)
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
+    (void)header;
+    return NULL;
 }
 
 /**
@@ -176,6 +155,8 @@ void handle_http_request(int fd, struct cache *cache)
 {
     const int request_buffer_size = 65536; // 64K
     char request[request_buffer_size];
+    char method[128];
+    char path[8192];
 
     // Read request
     int bytes_recvd = recv(fd, request, request_buffer_size - 1, 0);
@@ -191,16 +172,8 @@ void handle_http_request(int fd, struct cache *cache)
     ///////////////////
 
     // Read the first two components of the first line of the request
-    char method[200];
-    char path[8192];
-    char protocol[200];
-
-    sscanf(request, "%s %s %s", method, path, protocol);
-
-    printf("request: %s", request);
-    printf("method: %ss\n", method);
-    printf("path: %s\n", path);
-    printf("protocol ---: %s\n", protocol);
+    sscanf(request, "%s %s", method, path);
+    printf("%s\n%s\n", method, path);
  
     // If GET, handle the get endpoints
 
@@ -212,9 +185,6 @@ void handle_http_request(int fd, struct cache *cache)
         if (strcmp(path, "/d20") == 0)
         {
             get_d20(fd);
-        } else if (strcmp(path, "/cat") == 0)
-        {
-            get_cat(fd);
         } else {
             get_file(fd, cache, path);
         }
